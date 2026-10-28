@@ -1,159 +1,37 @@
 
-<DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>PBM - FPS Prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PBM Test</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#101820;color:white;font-family:Arial,sans-serif;overflow:hidden;touch-action:none}
-canvas{display:block;width:100vw;height:100dvh}
-#hud{position:fixed;inset:0;pointer-events:none}
-.top{display:flex;justify-content:space-between;padding:14px;font-weight:bold;text-shadow:0 2px 4px #000}
-.team{background:#182d42dd;padding:10px;border-radius:8px}
-#message{position:absolute;top:22%;width:100%;text-align:center;font-size:14px;color:#cbd5e1}
-#cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:26px;color:#fff;text-shadow:0 0 5px #000}
-#controls{position:fixed;inset:0;pointer-events:none}
-.pad{position:absolute;bottom:28px;left:20px;display:grid;grid-template-columns:48px 48px 48px;grid-template-rows:48px 48px 48px;gap:4px;pointer-events:auto}
-button{border:1px solid #ffffff70;background:#263746d9;color:white;border-radius:12px;font-size:18px;font-weight:bold;touch-action:none}
-.pad button{width:48px;height:48px}
-#up{grid-column:2;grid-row:1}#left{grid-column:1;grid-row:2}#down{grid-column:2;grid-row:2}#right{grid-column:3;grid-row:2}
-.actions{position:absolute;right:18px;bottom:35px;display:flex;flex-direction:column;gap:12px;pointer-events:auto}
-.actions button{width:76px;height:58px;font-size:13px}
-#start{position:fixed;inset:0;background:#07111dee;display:flex;align-items:center;justify-content:center;text-align:center;padding:25px}
-#start button{padding:15px 25px;background:#b9232b;font-size:18px}
-.small{font-size:12px;color:#cbd5e1;line-height:1.6}
+body {
+  margin: 0;
+  background: #17212b;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  padding-top: 20vh;
+}
+h1 { color: #ff4545; font-size: 48px; }
+p { font-size: 18px; }
+button {
+  padding: 14px 24px;
+  border: 0;
+  border-radius: 10px;
+  background: #2463eb;
+  color: white;
+  font-size: 18px;
+}
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
-<div id="hud">
- <div class="top">
-  <div class="team">🔴 RED <span id="red">0</span></div>
-  <div class="team">PBM · TRAINING</div>
-  <div class="team">🔵 BLUE <span id="blue">0</span></div>
- </div>
- <div id="message">TRAINING AREA · FPS PROTOTYPE</div>
- <div id="cross">+</div>
-</div>
-<div id="controls">
- <div class="pad">
-  <button id="up">▲</button><button id="left">◀</button>
-  <button id="down">▼</button><button id="right">▶</button>
- </div>
- <div class="actions">
-  <button id="shoot">FIRE</button>
-  <button id="jump">JUMP</button>
-  <button id="look">LOOK</button>
- </div>
-</div>
-<div id="start">
- <div>
-  <h1>PBM</h1>
-  <h3>POINT BLANK MOBILE</h3>
-  <p>3D FPS TRAINING PROTOTYPE</p>
-  <p class="small">ต้นแบบทดสอบการเดินและเล็ง<br>ยังไม่มีระบบออนไลน์หรือการยิงบอท</p>
-  <button id="play">เริ่มฝึกซ้อม</button>
- </div>
-</div>
-<script>
-const canvas=document.getElementById('game');
-const ctx=canvas.getContext('2d');
-let W=0,H=0,started=false,shots=0;
-const player={x:0,z:0,angle:0};
-const keys={};
-function resize(){
- W=canvas.width=innerWidth*devicePixelRatio;
- H=canvas.height=innerHeight*devicePixelRatio;
-}
-addEventListener('resize',resize);resize();
-
-function draw(){
- const w=W,h=H;
- ctx.fillStyle='#8ca5b5';ctx.fillRect(0,0,w,h/2);
- ctx.fillStyle='#38454b';ctx.fillRect(0,h/2,w,h/2);
- // perspective floor grid
- const horizon=h*.48;
- ctx.strokeStyle='#718087';ctx.lineWidth=devicePixelRatio;
- for(let i=0;i<14;i++){
-   let y=horizon+(h-horizon)*i/14;
-   ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();
- }
- for(let i=-10;i<=10;i++){
-   ctx.beginPath();ctx.moveTo(w/2,horizon);
-   ctx.lineTo(w/2+i*w*.12,h);ctx.stroke();
- }
- // training buildings
- const shift=Math.sin(player.angle)*w*.12;
- function block(x,y,bw,bh,color){
-  ctx.fillStyle=color;ctx.fillRect(x+shift,y,bw,bh);
-  ctx.fillStyle='#27343b';ctx.fillRect(x+shift+bw*.12,y+bh*.18,bw*.2,bh*.22);
-  ctx.fillRect(x+shift+bw*.58,y+bh*.18,bw*.2,bh*.22);
-  ctx.fillStyle='#6e7c82';ctx.fillRect(x+shift,y,bw,5*devicePixelRatio);
- }
- block(w*.08,h*.30,w*.18,h*.20,'#59676e');
- block(w*.72,h*.27,w*.20,h*.23,'#4e5d64');
- block(w*.38,h*.35,w*.22,h*.12,'#65747b');
- // target dummies
- for(let i=0;i<3;i++){
-  const x=w*(.25+i*.25)+shift*.3;
-  const y=h*.46;
-  ctx.fillStyle='#202b31';ctx.fillRect(x-w*.012,y,w*.024,h*.09);
-  ctx.fillStyle=i===1?'#c7333b':'#356b9b';
-  ctx.beginPath();ctx.arc(x,y-h*.025,w*.018,0,Math.PI*2);ctx.fill();
-  ctx.fillRect(x-w*.012,y-h*.01,w*.024,h*.045);
- }
- // weapon silhouette
- ctx.fillStyle='#151a1e';
- ctx.beginPath();ctx.moveTo(w*.43,h);ctx.lineTo(w*.46,h*.83);
- ctx.lineTo(w*.55,h*.83);ctx.lineTo(w*.59,h);ctx.fill();
- ctx.fillStyle='#333d43';ctx.fillRect(w*.475,h*.79,w*.05,h*.15);
- if(started && keys.fire){
-   ctx.fillStyle='#ffe59a';
-   ctx.beginPath();ctx.moveTo(w*.5,h*.78);ctx.lineTo(w*.47,h*.70);ctx.lineTo(w*.53,h*.70);ctx.fill();
- }
- requestAnimationFrame(draw);
-}
-draw();
-
-function bind(id,key){
- const el=document.getElementById(id);
- el.addEventListener('pointerdown',e=>{e.preventDefault();keys[key]=true;});
- ['pointerup','pointercancel','pointerleave'].forEach(ev=>
-  el.addEventListener(ev,e=>{e.preventDefault();keys[key]=false;}));
-}
-bind('up','forward');bind('down','back');
-bind('left','left');bind('right','right');bind('shoot','fire');
-
-document.getElementById('play').onclick=()=>{
- started=true;document.getElementById('start').style.display='none';
- document.getElementById('message').textContent='TRAINING STARTED';
-};
-
-document.getElementById('jump').onclick=()=>{
- document.getElementById('message').textContent='กระโดด: ระบบกำลังพัฒนา';
-};
-document.getElementById('look').onclick=()=>{
- player.angle+=.25;
- document.getElementById('message').textContent='ปรับมุมมองแล้ว';
-};
-
-let last=0;
-function update(t){
- const dt=Math.min((t-last)/16.67,3);last=t;
- if(started){
-  if(keys.forward)player.z+=.04*dt;
-  if(keys.back)player.z-=.04*dt;
-  if(keys.left)player.angle-=.025*dt;
-  if(keys.right)player.angle+=.025*dt;
-  if(keys.fire){
-   // placeholder firing action
-  }
- }
- requestAnimationFrame(update);
-}
-requestAnimationFrame(update);
-</script>
+<h1>PBM</h1>
+<p>เว็บไซต์ทำงานแล้ว!</p>
+<button onclick="document.getElementById('status').textContent='พร้อมพัฒนาต่อ!'">
+ทดสอบ
+</button>
+<p id="status">รอทดสอบ</p>
 </body>
 </html>
